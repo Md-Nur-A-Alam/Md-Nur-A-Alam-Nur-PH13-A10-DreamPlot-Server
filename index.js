@@ -27,9 +27,31 @@ const run = async () => {
         // Connect the client to the server
         await client.connect();
 
-        const db = client.db('simpleCrud');
+        const db = client.db('Nur-PH13-A10-DreamPlot');
+        const propertiesCollection = db.collection('properties');
+        const bookingsCollection = db.collection('bookings');
+        const transactionsCollection = db.collection('transactions');
+        const reviewsCollection = db.collection('reviews');
+        const favoritesCollection = db.collection('favorites');
         const usersCollection = db.collection('users');
 
+        // ========================= properties api here ===========================
+
+        // featured properties api here using mongoDB limits to show 6 records
+        app.get('/featuredProperties', async (req, res) => {
+            const cursor = propertiesCollection.find({ isFeatured: true }).limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+        // ========================= review api here ===========================
+
+        app.get('/reviews', async (req, res) => {
+            const cursor = reviewsCollection.find({});
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
+        // ========================= user api here ===========================
         app.get('/users', async (req, res) => {
             const cursor = usersCollection.find({});
             const result = await cursor.toArray();
