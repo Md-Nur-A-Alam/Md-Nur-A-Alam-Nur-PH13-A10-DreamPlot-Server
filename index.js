@@ -43,6 +43,25 @@ const run = async () => {
             const result = await cursor.toArray();
             res.send(result);
         })
+
+        app.get('/properties/:id', async (req, res) => {
+            const id = req.params.id;
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).send({ error: "Invalid properties ID format" });
+            }
+            try {
+                const query = { _id: new ObjectId(id) };
+                const properties = await propertiesCollection.findOne(query);
+                if (!properties) {
+                    return res.status(404).send({ error: "properties not found" });
+                }
+                res.send(properties);
+            } catch (error) {
+                console.error("Error in GET /properties/:id:", error);
+                res.status(500).send({ error: "Internal server error" });
+            }
+        })
+
         // ========================= review api here ===========================
 
         app.get('/reviews', async (req, res) => {
