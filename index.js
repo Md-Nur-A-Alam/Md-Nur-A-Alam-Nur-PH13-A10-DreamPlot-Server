@@ -39,7 +39,7 @@ const verifyToken = (req, res, next) => {
 const run = async () => {
     try {
         // Connect the client to the server
-        await client.connect();
+        // await client.connect();
 
         const db = client.db('Nur-PH13-A10-DreamPlot');
         const propertiesCollection = db.collection('properties');
@@ -920,8 +920,8 @@ const run = async () => {
             }
         });
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
