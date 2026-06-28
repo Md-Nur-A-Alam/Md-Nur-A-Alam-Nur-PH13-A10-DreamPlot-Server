@@ -37,9 +37,8 @@ const run = async () => {
 
         // ========================= properties api here ===========================
 
-        // featured properties api here using mongoDB limits to show 6 records
-        app.get('/featuredProperties', async (req, res) => {
-            const cursor = propertiesCollection.find({ isFeatured: true }).limit(6);
+        app.get('/properties', async (req, res) => {
+            const cursor = propertiesCollection.find();
             const result = await cursor.toArray();
             res.send(result);
         })
@@ -60,6 +59,14 @@ const run = async () => {
                 console.error("Error in GET /properties/:id:", error);
                 res.status(500).send({ error: "Internal server error" });
             }
+        })
+
+        
+        // featured properties api here using mongoDB limits to show 6 records
+        app.get('/featuredProperties', async (req, res) => {
+            const cursor = propertiesCollection.find({ isFeatured: true }).limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
         })
 
         // ========================= review api here ===========================
