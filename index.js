@@ -919,6 +919,117 @@ const run = async () => {
                 res.status(500).send({ error: "Failed to load owner analytics data" });
             }
         });
+
+        // GET /admin/analytics (Admin only)
+        app.get('/admin/analytics', verifyToken, verifyAdmin, async (req, res) => {
+            try {
+                const totalUsers = await usersCollection.countDocuments();
+                const tenantCount = await usersCollection.countDocuments({ role: 'Tenant' });
+                const ownerCount = await usersCollection.countDocuments({ role: 'Owner' });
+                const adminCount = await usersCollection.countDocuments({ role: 'Admin' });
+
+                const totalProperties = await propertiesCollection.countDocuments();
+                const approvedProperties = await propertiesCollection.countDocuments({ status: 'approved' });
+                const pendingProperties = await propertiesCollection.countDocuments({ status: 'pending' });
+                const rejectedProperties = await propertiesCollection.countDocuments({ status: 'rejected' });
+
+                const bookings = await bookingsCollection.find({}).toArray();
+                const transactions = await transactionsCollection.find({}).toArray();
+                const totalRevenue = transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+
+                const monthlyData = {};
+                const now = new Date();
+                for (let i = 11; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const key = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+                    monthlyData[key] = 0;
+                }
+
+                transactions.forEach(tx => {
+                    const txDate = new Date(tx.date || tx.createdAt || new Date());
+                    const key = txDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+                    if (monthlyData[key] !== undefined) {
+                        monthlyData[key] += tx.amount || 0;
+                    }
+                });
+
+                const chartData = Object.keys(monthlyData).map(month => ({
+                    month,
+                    revenue: monthlyData[month]
+                }));
+
+                res.send({
+                    totalUsers,
+                    tenantCount,
+                    ownerCount,
+                    adminCount,
+                    totalProperties,
+                    approvedProperties,
+                    pendingProperties,
+                    rejectedProperties,
+                    totalBookings: bookings.length,
+                    totalTransactions: transactions.length,
+                    totalRevenue,
+                    chartData
+                });
+            } catch (error) {
+                console.error("Error in admin analytics:", error);
+                res.status(500).send({ error: "Failed to load admin analytics data" });
+            }
+        });
+
+        // GET /tenant/analytics/:email (Tenant only)
+        app.get('/tenant/analytics/:email', verifyToken, verifyTenant, async (req, res) => {
+            try {
+                const email = req.params.email;
+                if (req.decoded.email !== email) {
+                    return res.status(403).send({ message: 'forbidden access' });
+                }
+
+                const bookings = await bookingsCollection.find({ tenantEmail: email }).toArray();
+                const favoritesCount = await favoritesCollection.countDocuments({ tenantEmail: email });
+
+                const totalPaidBookings = bookings.filter(b => b.paymentStatus === 'paid').length;
+                const totalPendingBookings = bookings.filter(b => b.bookingStatus === 'pending').length;
+                
+                const totalSpent = bookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
+
+                const monthlyData = {};
+                const now = new Date();
+                for (let i = 11; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const key = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+                    monthlyData[key] = 0;
+                }
+
+                bookings.forEach(b => {
+                    if (b.paymentStatus === 'paid') {
+                        const bDate = new Date(b.bookingDate || new Date());
+                        const key = bDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+                        if (monthlyData[key] !== undefined) {
+                            monthlyData[key] += b.amountPaid || 0;
+                        }
+                    }
+                });
+
+                const chartData = Object.keys(monthlyData).map(month => ({
+                    month,
+                    expenses: monthlyData[month]
+                }));
+
+                res.send({
+                    totalBookings: bookings.length,
+                    totalPaidBookings,
+                    totalPendingBookings,
+                    totalFavorites: favoritesCount,
+                    totalSpent,
+                    chartData
+                });
+            } catch (error) {
+                console.error("Error in tenant analytics:", error);
+                res.status(500).send({ error: "Failed to load tenant analytics data" });
+            }
+        });
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
